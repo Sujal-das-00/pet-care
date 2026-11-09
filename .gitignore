@@ -1,0 +1,7 @@
+.data/
+node_modules/
+.env
+.expo/
+dist/
+# ...except the web build, which the server serves in production (see DEPLOY.md)
+!frontend/dist/

@@ -1,0 +1,11 @@
+{
+  "name": "pawcircle",
+  "private": true,
+  "description": "PawCircle monorepo: backend (API + serves the web app) and frontend (Expo app)",
+  "scripts": {
+    "build:web": "npm --prefix frontend ci && EXPO_PUBLIC_API_URL= EXPO_PUBLIC_DEMO_MODE=0 npm --prefix frontend run export",
+    "start": "npm --prefix backend start",
+    "test": "npm --prefix backend test"
+  },
+  "engines": { "node": ">=22" }
+}

@@ -1,0 +1,58 @@
+# Render Blueprint for PawCircle. One service serves everything: the API, the web app and live chat.
+# Create it with: Render dashboard -> New -> Blueprint -> pick this repo. Full guide: DEPLOY.md
+#
+# Before deploying, build the web app and commit it:   npm run build:web   (see DEPLOY.md, "Step 2")
+
+services:
+  - type: web
+    name: pawcircle
+    runtime: node
+    # "free" works for a trial but sleeps after ~15 min idle (slow first load, no reminders while asleep).
+    # Use a paid instance for a real launch. Keep it at ONE instance: live chat keeps its rooms in memory.
+    plan: starter
+    region: singapore # closest Render region to Japan
+    autoDeploy: true
+    healthCheckPath: /health
+
+    # The web app is built beforehand and committed in frontend/dist, so the server only needs its own
+    # (small) production dependencies. This also avoids building the app on Render: a cold build needs ~1 GB
+    # of RAM, more than the 512 MB plans have.
+    buildCommand: cd backend && npm ci --omit=dev
+    # `seed` adds the official event ideas / starter communities if they are missing (never overwrites).
+    startCommand: cd backend && node scripts/seed.js && node src/server.js
+
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+
+      # --- required: you fill these in the Render dashboard when the Blueprint is created ---
+      - key: MONGODB_URI # MongoDB Atlas connection string, ending in /pawcircle
+        sync: false
+      - key: JWT_ACCESS_SECRET # generated for you; keep it secret and don't change it casually (signs everyone out)
+        generateValue: true
+
+      # --- community membership (paid) ---
+      - key: ENFORCE_MEMBERSHIP
+        value: "1"
+      - key: MEMBERSHIP_PRICE_NIM # what members pay, in NIM. Change it any time and redeploy.
+        value: "1"
+      - key: MEMBERSHIP_DAYS # 0 = one-time payment, access never expires
+        value: "0"
+
+      # --- Nimiq payments (leave the two below empty to run with payments off) ---
+      - key: NIMIQ_NETWORK # mainnet or testnet
+        value: mainnet
+      - key: NIMIQ_RECEIVE_ADDRESS # YOUR Nimiq wallet address: payments are sent here
+        sync: false
+      - key: NIMIQ_RPC_URL # a Nimiq node's JSON-RPC URL (see DEPLOY.md)
+        sync: false
+      - key: NIMIQ_MIN_CONFIRMATIONS
+        value: "2"
+
+      # --- hosting ---
+      - key: RUN_WORKER_IN_PROCESS # reminders run inside this service, so no separate worker is needed
+        value: "1"
+      - key: TRUST_PROXY_HOPS
+        value: "1"

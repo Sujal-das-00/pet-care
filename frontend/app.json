@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "PawCircle",
+    "slug": "pawcircle",
+    "scheme": "pawcircle",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#FDF8F2",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "app.pawcircle.mobile",
+      "infoPlist": {
+        "CFBundleAllowMixedLocalizations": true
+      }
+    },
+    "android": {
+      "package": "app.pawcircle.mobile",
+      "adaptiveIcon": {
+        "backgroundColor": "#FDF8F2",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "locales": {},
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-localization",
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "color": "#3E7D32"
+        }
+      ]
+    ]
+  }
+}
