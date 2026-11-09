@@ -25,6 +25,7 @@ export default function Settings() {
   const member = Boolean(ent.data?.membership) || ent.data?.features?.community;
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
+  const wallet = user?.authMethod === 'nimiq';
   const [deleting, setDeleting] = useState(false);
   const [pw, setPw] = useState('');
 
@@ -49,7 +50,7 @@ export default function Settings() {
   });
 
   const removeAccount = safe(async () => {
-    await MeApi.deleteAccount(pw);
+    await MeApi.deleteAccount(wallet ? { confirm: pw } : { password: pw });
     await logout();
   });
 
@@ -72,7 +73,8 @@ export default function Settings() {
 
       <Card>
         <AppText variant="h2">{user?.profile?.displayName}</AppText>
-        <AppText variant="small">{user?.email}</AppText>
+        <AppText variant="small" selectable>{wallet ? user.nimiqAddress : user?.email}</AppText>
+        {wallet ? <AppText variant="tiny" style={{ marginTop: 2 }}>{t('settings.signedInNimiq')}</AppText> : null}
         <Row gap={8} style={{ marginTop: 10 }}>
           <Chip label={t(`settings.plan.${plan}`)} tint={colors.greenSoft} ink={colors.greenDark} icon="ribbon" />
         </Row>
@@ -133,8 +135,10 @@ export default function Settings() {
       {deleting ? (
         <Card tint="#FBE9E7">
           <AppText variant="small" style={{ marginBottom: 8, color: colors.ink }}>{t('settings.deleteBody')}</AppText>
-          <Field label={t('auth.password')} value={pw} onChangeText={setPw} secureTextEntry />
-          <Button variant="danger" title={t('settings.deleteConfirm')} onPress={removeAccount} disabled={!pw} />
+          {wallet
+            ? <Field label={t('settings.typeDelete')} value={pw} onChangeText={setPw} autoCapitalize="characters" />
+            : <Field label={t('auth.password')} value={pw} onChangeText={setPw} secureTextEntry />}
+          <Button variant="danger" title={t('settings.deleteConfirm')} onPress={removeAccount} disabled={wallet ? pw !== 'DELETE' : !pw} />
         </Card>
       ) : (
         <Button variant="danger" title={t('settings.delete')} onPress={confirmDelete} />

@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { AuthApi, MeApi } from '../api/resources';
+import { signWithNimiqPay } from '../payments/nimiqPay';
 import { currentSession, loadSession, saveSession, setPaywallHandler, setSignedOutHandler } from '../api/client';
 
 const AuthContext = createContext(null);
@@ -50,6 +51,22 @@ export function AuthProvider({ children }) {
       onboardingDone: Boolean(user?.preferences?.onboardingCompleted),
       async login(body) { await adopt(await AuthApi.login(body)); },
       async register(body) { await adopt(await AuthApi.register(body)); },
+      /**
+       * Sign in with the Nimiq Pay wallet: get a one-time challenge, have the wallet sign it, let the server
+       * verify the signature. The first time, this also creates the account (consent is required for that).
+       * Returns { created } or { cancelled: true }.
+       */
+      async loginWithNimiq({ acceptTerms, acceptPrivacy, marketingOptIn = false }) {
+        const { challenge } = await AuthApi.nimiqChallenge();
+        const signed = await signWithNimiqPay(challenge.message);
+        if (signed.cancelled) return { cancelled: true };
+        const res = await AuthApi.nimiqSignIn({
+          challengeId: challenge.id, publicKey: signed.publicKey, signature: signed.signature,
+          acceptTerms, acceptPrivacy, marketingOptIn,
+        });
+        await adopt(res);
+        return { created: res.created };
+      },
       async logout() {
         const s = currentSession();
         try { if (s) await AuthApi.logout(s.refreshToken); } catch { /* best effort */ }

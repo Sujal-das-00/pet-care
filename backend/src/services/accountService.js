@@ -127,6 +127,7 @@ export async function deleteAccount(userId) {
   await User.updateOne(
     { _id: userId },
     {
+      $unset: { nimiq: '' }, // frees the wallet to sign up again
       $set: {
         status: 'deleted',
         deletedAt: new Date(),

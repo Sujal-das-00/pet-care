@@ -14,8 +14,14 @@ const consentSchema = new Schema(
 
 const userSchema = new Schema(
   {
-    email: { type: String, required: true, lowercase: true, trim: true, maxlength: 254 },
-    passwordHash: { type: String, required: true, select: false },
+    // Accounts are identified by a Nimiq wallet. Email + password exist only for development / tests.
+    nimiq: {
+      address: { type: String, default: undefined }, // "NQ.. .... ...." derived from the signing public key
+      publicKey: { type: String, default: undefined }, // hex
+      linkedAt: { type: Date, default: undefined },
+    },
+    email: { type: String, lowercase: true, trim: true, maxlength: 254, default: undefined },
+    passwordHash: { type: String, select: false, default: undefined },
     status: { type: String, enum: ['active', 'suspended', 'deleted'], default: 'active', index: true },
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
     locale: { type: String, enum: ['en'], default: 'en' },
@@ -50,7 +56,9 @@ const userSchema = new Schema(
   { timestamps: true },
 );
 
-// Unique among live accounts only, so a deleted account's email can be re-registered.
-userSchema.index({ email: 1 }, { unique: true, partialFilterExpression: { deletedAt: null } });
+// Unique among live accounts only, so a deleted account's email / wallet can sign up again.
+// (`$type: 'string'` so accounts without an email don't collide with each other.)
+userSchema.index({ email: 1 }, { unique: true, name: 'email_live_unique', partialFilterExpression: { deletedAt: null, email: { $type: 'string' } } });
+userSchema.index({ 'nimiq.address': 1 }, { unique: true, name: 'nimiq_address_live_unique', partialFilterExpression: { deletedAt: null, 'nimiq.address': { $type: 'string' } } });
 
 export const User = mongoose.model('User', userSchema);

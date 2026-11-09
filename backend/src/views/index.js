@@ -13,7 +13,9 @@ const strip = (doc, omit = []) => {
 
 export const userView = (u) => ({
   id: String(u._id),
-  email: u.email,
+  email: u.email ?? null,
+  authMethod: u.nimiq?.address ? 'nimiq' : 'password',
+  nimiqAddress: u.nimiq?.address ?? null,
   role: u.role,
   locale: u.locale,
   timezone: u.timezone,

@@ -25,6 +25,7 @@ const families = {
   'events.status.': ['scheduled', 'cancelled', 'completed'], 'events.scope.': ['upcoming', 'mine'],
   'challenges.status.': ['active', 'upcoming', 'ended'], 'leaderboard.scope.': ['global', 'local', 'community'],
   'admin.metric.': ['distance_km', 'activity_minutes', 'active_days', 'check_ins'], 'chat.sub.': ['global', 'local', 'community'],
+  'auth.errors.': ['provider', 'signature_invalid', 'challenge_invalid', 'consent_required'],
   'unlock.reasons.': ['wrong_recipient', 'amount_too_low', 'wrong_reference', 'transaction_failed'],
   'community.kinds.': ['general', 'city', 'breed', 'activity', 'interest'],
   'safety.reasons.': ['spam', 'harassment', 'inappropriate', 'unsafe_event', 'privacy', 'other'],

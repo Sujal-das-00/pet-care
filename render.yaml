@@ -52,6 +52,8 @@ services:
         value: "2"
 
       # --- hosting ---
+      - key: ENABLE_PASSWORD_AUTH # people sign in with their Nimiq Pay wallet; email + password stays off in production
+        value: "0"
       - key: RUN_WORKER_IN_PROCESS # reminders run inside this service, so no separate worker is needed
         value: "1"
       - key: TRUST_PROXY_HOPS

@@ -5,6 +5,9 @@ export const AuthApi = {
   register: (body) => api.post('/v1/auth/register', body, { auth: false }),
   login: (body) => api.post('/v1/auth/login', body, { auth: false }),
   logout: (refreshToken) => api.post('/v1/auth/logout', { refreshToken }, { auth: false }),
+  methods: () => api.get('/v1/auth/methods', { auth: false }),
+  nimiqChallenge: () => api.post('/v1/auth/nimiq/challenge', {}, { auth: false }),
+  nimiqSignIn: (body) => api.post('/v1/auth/nimiq/sign-in', body, { auth: false }),
 };
 
 export const MeApi = {
@@ -17,7 +20,8 @@ export const MeApi = {
   notifications: () => api.get('/v1/me/notifications?limit=50'),
   readAll: () => api.post('/v1/me/notifications/read-all'),
   export: () => api.get('/v1/me/export'),
-  deleteAccount: (password) => api.del('/v1/me', { password }),
+  // Wallet accounts confirm by typing DELETE; accounts with a password (development only) use it.
+  deleteAccount: (proof) => api.del('/v1/me', proof),
 };
 
 export const HomeApi = { get: () => api.get('/v1/home') };

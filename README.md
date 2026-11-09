@@ -14,7 +14,8 @@ petcare/
 
 | Area | State |
 |---|---|
-| Auth (register/login, refresh-token rotation + reuse detection, consent records) | done, tested |
+| **Sign in with Nimiq Pay** (wallet signature verified server-side, one-time challenges, account = wallet address; no email or password) | done, tested; **not yet run against the real Nimiq Pay app** |
+| Sessions (refresh-token rotation + reuse detection, consent records) | done, tested |
 | Owner profile, preferences, notification prefs | done |
 | Pet profiles (dog/cat), multi-pet | done |
 | Weight tracking (kg/lb/g, chart, history, pagination) | done |
@@ -59,8 +60,8 @@ npm run dev
 npm run worker      # separate process: delivers due reminders (safe to run several)
 npm run seed        # official event ideas + 6 empty starter communities (re-runnable)
 npm test            # 86+ tests (see below) against a throwaway DB (pawcircle_test)
-npm run make-admin -- you@example.com   # grant moderation rights to an account
-npm run grant-membership -- you@example.com   # comp community access (staff / local testing, no payment)
+npm run make-admin -- "NQ.. wallet address"   # grant moderation rights (the wallet must have signed in once)
+npm run grant-membership -- "NQ.. wallet address"   # comp community access (staff / local testing, no payment)
 
 # 3) App
 cd frontend && npm install
@@ -235,3 +236,17 @@ reconnects). If the socket can't connect, the app polls every few seconds, so ch
 
 **Scaling note:** the live-delivery room map lives in one API process. Running several API instances needs a shared pub/sub
 (Redis) between them so a message reaches sockets connected to other instances — not built yet.
+
+## Sign-in
+
+Accounts are Nimiq wallets. The app calls Nimiq Pay's `sign()` on a one-time server challenge; the server verifies the Ed25519
+signature, derives the address (BLAKE2b-256 of the public key, checked against 12 real mainnet transactions) and signs the
+person in. A returning wallet gets its account back; a new wallet creates one (consent required). Challenges expire in 5
+minutes and work once; replays, forged keys and tampered messages are rejected (see `backend/tests/nimiq-auth.test.js`).
+
+Email + password still exists **only** for local development and tests: set `ENABLE_PASSWORD_AUTH=1` in `backend/.env`. It is
+off by default and off in `render.yaml`, where those endpoints return 404.
+
+**Honest limit:** Nimiq's docs say to verify `sign()`'s signature but don't state its byte format. The server accepts Nimiq's
+documented signed-message format and three close variants (safe because every message carries a fresh nonce). Real Nimiq Pay
+sign-in has not been tested; the server logs which format matched on the first real sign-in.

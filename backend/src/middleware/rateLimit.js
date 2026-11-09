@@ -13,5 +13,7 @@ const make = (windowMs, limit, code) =>
 export const apiLimiter = make(60_000, 240, 'rate_limited');
 // Payment checks hit an external node, so keep them modest per client.
 export const paymentLimiter = make(60_000, 30, 'payment_rate_limited');
+// Wallet sign-in is two requests (challenge + verify) and mobile networks share IPs, so allow more than passwords.
+export const walletAuthLimiter = make(15 * 60_000, 120, 'auth_rate_limited');
 // Credential endpoints: brute-force / spam protection.
 export const authLimiter = make(15 * 60_000, 30, 'auth_rate_limited');

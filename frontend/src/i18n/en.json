@@ -52,7 +52,22 @@
     "badCredentials": "Incorrect email or password.",
     "emailTaken": "An account with this email already exists.",
     "acceptTerms": "I agree to the Terms of Service and the Privacy Policy, including how my personal information is handled under Japan's APPI.",
-    "marketing": "Send me tips and community news (optional)"
+    "marketing": "Send me tips and community news (optional)",
+    "signInNimiq": "Sign in with Nimiq Pay",
+    "signInHint": "You'll approve a quick signature in Nimiq Pay. It proves the wallet is yours and doesn't send any funds.",
+    "needNimiqTitle": "PawCircle runs inside Nimiq Pay",
+    "needNimiqBody": "Sign in with your Nimiq wallet. No email or password needed. Open PawCircle from the Nimiq Pay app to continue.",
+    "openInNimiq": "Open in Nimiq Pay",
+    "installHint": "Don't have Nimiq Pay yet? Install it first, then come back and tap the button.",
+    "cantOpen": "Couldn't open Nimiq Pay. Make sure it's installed.",
+    "cancelled": "Sign-in was cancelled. Tap the button to try again.",
+    "devSignIn": "Developer sign-in (email)",
+    "errors": {
+      "provider": "Nimiq Pay didn't respond. Open PawCircle from inside the Nimiq Pay app.",
+      "signature_invalid": "We couldn't verify your wallet signature. Please try again.",
+      "challenge_invalid": "That sign-in request expired. Please try again.",
+      "consent_required": "Please accept the Terms and Privacy Policy to create your account."
+    }
   },
   "forms": {
     "badDate": "Use YYYY-MM-DD",
@@ -414,7 +429,9 @@
     "communityActive": "Community access active",
     "communityLocked": "Community locked",
     "until": "Active until {{date}}",
-    "lifetime": "Lifetime access"
+    "lifetime": "Lifetime access",
+    "signedInNimiq": "Signed in with Nimiq Pay",
+    "typeDelete": "Type DELETE to confirm"
   },
   "membership": {
     "required": "Community is for members. Unlock it to continue."

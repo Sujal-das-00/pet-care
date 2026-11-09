@@ -23,3 +23,22 @@ export async function payWithNimiqPay({ recipient, amountLuna, reference }) {
     throw error;
   }
 }
+
+/**
+ * Asks Nimiq Pay to sign `message` with the user's wallet (they approve in a native dialog; nothing is sent).
+ * Returns { publicKey, signature } (hex) or { cancelled: true }. The server verifies this and derives the wallet
+ * address from the public key. We never trust an address the app reports.
+ */
+export async function signWithNimiqPay(message) {
+  const nimiq = await init({ timeout: 8000 });
+  try {
+    const { publicKey, signature } = await nimiq.sign(message);
+    return { publicKey, signature };
+  } catch (error) {
+    if (NimiqProviderError.is(error) && error.type === 'PERMISSION_DENIED') return { cancelled: true };
+    throw error;
+  }
+}
+
+/** https link that opens this app as a mini app inside Nimiq Pay (documented by Nimiq; works with any domain). */
+export const openInNimiqPayUrl = () => `https://nimpay.app/miniapps/open/${typeof window !== 'undefined' ? window.location.host : ''}`;

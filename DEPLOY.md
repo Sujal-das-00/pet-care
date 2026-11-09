@@ -103,17 +103,25 @@ If it says `Web app: not found`, `frontend/dist` wasn't committed (Step 2).
 
 ## Step 5 — Make yourself the admin
 
-Only admins can post weekly challenges and review reports. There's no email verification, so **register your own account
-first** (open the site and sign up), then promote it from your computer, pointing the script at the same database:
+People sign in with their **Nimiq Pay wallet**; there are no emails or passwords. Only admins can post weekly challenges and
+review reports, so:
+
+1. Open your site **inside Nimiq Pay** (Mini Apps → Custom URL, or `nimiqpay://miniapp?url=<your-domain>`) and sign in once.
+   That creates your account from your wallet.
+2. In the app go to **Settings**. Your wallet address (`NQ..`) is shown under your name. Copy it.
+3. From your computer, promote it in the same database:
 
 ```bash
 cd backend
 npm install
-MONGODB_URI="<your Atlas connection string>" npm run make-admin -- you@example.com
+MONGODB_URI="<your Atlas connection string>" npm run make-admin -- "NQ12 3456 7890 ..."
 ```
 
-Sign out and back in. **Settings → Admin → Manage weekly challenges** now appears. To give someone (or yourself, for
-testing) community access without a payment: `MONGODB_URI=... npm run grant-membership -- email@example.com`.
+Close and reopen the app. **Settings → Admin → Manage weekly challenges** now appears. To give a wallet community access
+without a payment (staff, support, testing): `MONGODB_URI=... npm run grant-membership -- "NQ.. ...."`.
+
+> Anyone who tries to sign in must hold the wallet: the server verifies a signature from it, so nobody can take over your
+> admin account by knowing your address. Email + password sign-in is switched off in production (`ENABLE_PASSWORD_AUTH=0`).
 
 ---
 
@@ -129,6 +137,7 @@ Change these in Render → your service → **Environment**, then it redeploys a
 | `NIMIQ_NETWORK` | `mainnet` or `testnet`. Must match the node in `NIMIQ_RPC_URL` |
 | `NIMIQ_MIN_CONFIRMATIONS` | Blocks a payment needs before it unlocks access (default 2) |
 | `TRUST_PROXY_HOPS` | Proxies in front of the app. If every visitor seems to share one rate limit (everyone gets "too many requests"), raise it to `2` |
+| `ENABLE_PASSWORD_AUTH` | Keep `0`. Email + password sign-in is for local development only |
 | `RUN_WORKER_IN_PROCESS` | `1` runs reminders inside the web service. Leave it on |
 
 ## Nimiq payments
@@ -145,6 +154,18 @@ Change these in Render → your service → **Environment**, then it redeploys a
 - **One-tap payments inside Nimiq Pay:** in Nimiq Pay go to **Mini Apps → Custom URL** and enter your Render address, or share
   `nimiqpay://miniapp?url=<your-domain>` (it must be HTTPS, which Render provides). Outside Nimiq Pay the unlock screen shows
   the address, amount and message to pay from any Nimiq wallet.
+
+## Sign-in (Nimiq Pay)
+
+PawCircle is a Nimiq Pay **mini app**: the app asks Nimiq Pay to sign a one-time message (`nimiq.sign`), and the server checks
+the signature and derives the wallet address from the public key. That address *is* the account. Opened in a normal browser or
+phone browser, the app shows an **Open in Nimiq Pay** button instead of a sign-in form.
+
+- **Nimiq Pay is required to sign in**, so you can only test sign-in inside Nimiq Pay. Nimiq's tutorial mentions mini-app
+  testing may be limited to allow-listed users; check their tutorial or the competition dashboard if the Custom URL doesn't load.
+- On the first sign-in the server logs `[nimiq-auth] new account; signature verified as "<format>"`. If **every** sign-in fails
+  with "We couldn't verify your wallet signature", look for `[nimiq-auth] signature did not verify` in the logs: it means Nimiq
+  Pay signs in a format the server doesn't accept yet (the docs don't specify it), and the fix is a small server change.
 
 ## Custom domain
 
@@ -174,8 +195,8 @@ Check Render's pricing page for current prices.
 - **Health-document uploads** stay off until you configure Cloudflare R2 (`R2_ENDPOINT`, `R2_ACCESS_KEY_ID`,
   `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`).
 - **Running several instances** needs a shared message layer (Redis) for live chat first.
-- **Email verification and password reset** don't exist yet. Anyone can register with any email address, so use a strong,
-  unique password for your admin account.
+- **Account recovery:** an account *is* a wallet, so losing access to the wallet means losing the account. There's no "forgot
+  password", and nothing links a wallet to an email. Tell members to back up their Nimiq wallet's recovery phrase.
 - **Terms of Service and Privacy Policy pages** are referenced in the sign-up consent but the documents themselves aren't
   written; you need these before opening to the public (and for the App Store / Google Play).
 - **Monitoring and alerts:** use Render's built-in logs/metrics and Atlas alerts to start.
@@ -188,6 +209,8 @@ Check Render's pricing page for current prices.
 | Logs: `MEMBERSHIP_PRICE_NIM must be a positive number…` | The price isn't a plain number such as `1` or `2.5` |
 | `Missing env var JWT_ACCESS_SECRET` or "must be >= 32 chars" | The secret is missing or too short. Let Render generate it |
 | Blank page, or `Web app: not found` in the logs | `frontend/dist` wasn't committed. Run `npm run build:web` and commit it |
+| "PawCircle runs inside Nimiq Pay" instead of a sign-in button | You opened the site in a normal browser. Open it from Nimiq Pay (Mini Apps → Custom URL) |
+| "Nimiq Pay didn't respond" | The app couldn't find Nimiq Pay's wallet. Open it from inside Nimiq Pay, not another in-app browser |
 | Page loads but sign-in says it can't reach the server | Open the browser console; the app should be calling its own address. Make sure you rebuilt after pulling the latest code |
 | Everyone gets "Too many requests" | All visitors look like one IP. Set `TRUST_PROXY_HOPS=2` |
 | Community says "Payments aren't available yet" | Check the start-up line `Nimiq payments: OFF — <reason>` in the logs |
@@ -201,5 +224,5 @@ Check Render's pricing page for current prices.
 - [ ] `JWT_ACCESS_SECRET` is the generated one and isn't stored anywhere public
 - [ ] You tested a full payment on **testnet**, then once on mainnet with a small amount
 - [ ] You run your own Nimiq node (or accept the risks of a public one)
-- [ ] Your admin account uses a unique password
+- [ ] `ENABLE_PASSWORD_AUTH` is `0` in production, and your admin wallet's recovery phrase is backed up
 - [ ] Terms of Service and Privacy Policy are published

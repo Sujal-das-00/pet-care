@@ -1,6 +1,7 @@
 process.env.NODE_ENV = 'test';
 process.env.MONGODB_URI = process.env.TEST_MONGODB_URI || 'mongodb://127.0.0.1:27018/pawcircle_test';
 process.env.JWT_ACCESS_SECRET = 'test-secret-test-secret-test-secret-123';
+process.env.ENABLE_PASSWORD_AUTH = '1'; // most tests create accounts with email+password; wallet sign-in has its own tests
 
 const { default: mongoose } = await import('mongoose');
 const { default: request } = await import('supertest');

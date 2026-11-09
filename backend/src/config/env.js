@@ -57,6 +57,9 @@ export const env = {
   // so one service hosts everything on one URL.
   webDist: process.env.WEB_DIST_DIR || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../frontend/dist'),
   // Run the reminder scheduler inside the API process (simplest hosting: one service, no separate worker).
+  // Email + password sign-in is the OLD way in. Accounts are Nimiq Pay wallets; this switch exists only so local
+  // development and the automated tests can create accounts without a wallet. Leave it off in production.
+  passwordAuth: process.env.ENABLE_PASSWORD_AUTH === '1',
   // How many reverse proxies sit in front of the API (Render, Cloudflare...). Wrong values make every visitor
   // look like the same IP (rate limits shared) or let clients spoof their IP, so it is explicit.
   trustProxyHops: Number(process.env.TRUST_PROXY_HOPS || 1),

@@ -4,7 +4,7 @@ import { userView } from '../views/index.js';
 import { audit } from '../services/auditService.js';
 import * as auth from '../services/authService.js';
 import { verifyPassword } from '../utils/password.js';
-import { unauthorized } from '../utils/errors.js';
+import { badRequest, unauthorized } from '../utils/errors.js';
 import { entitlementsFor } from '../services/entitlementService.js';
 import { deleteAccount, exportUserData } from '../services/accountService.js';
 
@@ -67,7 +67,11 @@ export async function exportData(req, res) {
 
 export async function removeAccount(req, res) {
   const user = await User.findById(req.userId).select('+passwordHash');
-  if (!(await verifyPassword(req.valid.body.password, user.passwordHash))) throw unauthorized('Password is incorrect');
+  if (user.passwordHash) {
+    if (!req.valid.body.password || !(await verifyPassword(req.valid.body.password, user.passwordHash))) throw unauthorized('Password is incorrect');
+  } else if (req.valid.body.confirm !== 'DELETE') {
+    throw badRequest('Type DELETE to confirm');
+  }
   audit(req, 'account.delete', 'User', req.userId);
   await deleteAccount(req.userId);
   res.status(204).end();
