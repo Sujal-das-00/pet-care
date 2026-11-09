@@ -201,10 +201,26 @@ Check Render's pricing page for current prices.
   written; you need these before opening to the public (and for the App Store / Google Play).
 - **Monitoring and alerts:** use Render's built-in logs/metrics and Atlas alerts to start.
 
+## If you created the service by hand (not with the Blueprint)
+
+The Blueprint sets everything for you. If you created the service manually (**New → Web Service**), set these in the service's
+**Settings** and **Environment**:
+
+| Setting | Value |
+|---|---|
+| Build Command | `yarn install` (Render's default works: the repo root installs the backend's packages for you) |
+| Start Command | `yarn start` (Render's default), or `cd backend && node scripts/seed.js && node src/server.js` to also add the starter content |
+| Health Check Path | `/health` |
+| Environment variables | `NODE_ENV=production`, `MONGODB_URI`, `JWT_ACCESS_SECRET` (a random string of 32+ characters), `RUN_WORKER_IN_PROCESS=1`, `ENABLE_PASSWORD_AUTH=0`, and the `NIMIQ_*` and `MEMBERSHIP_*` values from the table below |
+
+Node 22 is pinned for you (`.node-version` and `package.json`), so don't set a different version.
+
 ## Troubleshooting
 
 | Symptom | Likely cause and fix |
 |---|---|
+| `Cannot find package 'dotenv'` (or any package) at start-up | The backend's packages weren't installed. Pull the latest code: the repo root now installs them during `yarn install`. If you changed the Build Command, set it back to `yarn install` |
+| Logs say `Using Node.js version 26…` | Node isn't pinned. Make sure `.node-version` and the root `package.json` (`"engines": { "node": "22.x" }`) are committed |
 | Deploy fails or the service restarts in a loop; logs show `connect ECONNREFUSED`/`ServerSelectionError` | Atlas isn't reachable: check **Network Access** allows `0.0.0.0/0`, and that `MONGODB_URI` has the right password and a database name |
 | Logs: `MEMBERSHIP_PRICE_NIM must be a positive number…` | The price isn't a plain number such as `1` or `2.5` |
 | `Missing env var JWT_ACCESS_SECRET` or "must be >= 32 chars" | The secret is missing or too short. Let Render generate it |

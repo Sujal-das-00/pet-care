@@ -5,7 +5,10 @@
   "scripts": {
     "build:web": "npm --prefix frontend ci && EXPO_PUBLIC_API_URL= EXPO_PUBLIC_DEMO_MODE=0 npm --prefix frontend run export",
     "start": "npm --prefix backend start",
-    "test": "npm --prefix backend test"
+    "test": "npm --prefix backend test",
+    "postinstall": "node scripts/install-backend.mjs"
   },
-  "engines": { "node": ">=22" }
+  "engines": {
+    "node": "22.x"
+  }
 }
