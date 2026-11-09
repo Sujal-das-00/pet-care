@@ -70,8 +70,8 @@ function Routes() {
 }
 
 export default function RootLayout() {
-  const [loaded] = useFonts({ Nunito_500Medium, Nunito_700Bold, Nunito_800ExtraBold });
-  if (!loaded) return null;
+  const [loaded, fontError] = useFonts({ Nunito_500Medium, Nunito_700Bold, Nunito_800ExtraBold });
+  if (!loaded && !fontError) return null; // a font that fails to load must not leave a blank screen
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>

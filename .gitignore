@@ -5,3 +5,4 @@ node_modules/
 dist/
 # ...except the web build, which the server serves in production (see DEPLOY.md)
 !frontend/dist/
+!frontend/dist/assets/node_modules/
