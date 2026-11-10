@@ -3,7 +3,139 @@
 Handover document for anyone implementing payments in another codebase using this one as the reference.
 Everything below is taken from the code in this repo; file paths are given so you can read the source alongside.
 
+**Reading guide**
+- New here? Read **Part A** (plain-words walkthrough) and **Part B** (stuck approval? start here).
+- Implementing it? Read **Part C** (technical reference, §1–§13).
+
 ---
+
+# Part A — The whole flow in plain words (sign-in → settlement)
+
+## The big idea in 5 lines
+
+1. There is **no payment company** (no Stripe/PayPal). The user pays in **NIM** (Nimiq crypto) straight from their wallet app, **Nimiq Pay**, to our wallet.
+2. The user's **wallet is their account**. Signing in = proving "I own this wallet" by signing a message.
+3. Before paying, our server makes a **payment request** with a unique code (the *reference*, like `PAW-7F3K9Q2M8XJ4`).
+4. The wallet sends the NIM and writes that code into the transaction's **message**. That code is how we know *who* paid.
+5. The app never gets to say "I paid". The **server looks at the blockchain itself** and only unlocks if everything matches.
+
+## Who is involved
+
+| Actor | Job |
+|---|---|
+| **User** | Taps "Pay", approves in the wallet |
+| **Our app** (web build, opened *inside* Nimiq Pay) | Shows the price, asks the wallet to sign / pay, then asks our server "am I paid yet?" |
+| **Nimiq Pay** (wallet) | Holds the keys. Shows the native "Approve?" dialog. Sends the transaction |
+| **Our backend** | Creates payment requests, checks the blockchain, unlocks access. Holds **no keys, no money** |
+| **Nimiq node** (`NIMIQ_RPC_URL`) | Our window into the blockchain (read-only) |
+| **Merchant wallet** (`NIMIQ_RECEIVE_ADDRESS`) | Where the NIM lands. This is the settlement |
+
+## Step by step
+
+### Phase 1 — Sign in (collecting the user's NIM wallet)
+
+| # | What happens | Where |
+|---|---|---|
+| 1 | User opens PawCircle inside Nimiq Pay (Mini Apps → our URL). Nimiq Pay injects `window.nimiq` into the page. | `isInsideNimiqPay()` |
+| 2 | App asks the server for a challenge: `POST /v1/auth/nimiq/challenge`. Server returns a one-time message (random nonce + domain + time), valid **5 min**. | `nimiqAuthService.js` |
+| 3 | App calls `nimiq.sign(message)`. Nimiq Pay shows an **approve** dialog. **No money moves.** | `signWithNimiqPay()` |
+| 4 | Wallet returns `{ publicKey, signature }`. | |
+| 5 | App sends them to `POST /v1/auth/nimiq/sign-in`. | |
+| 6 | Server **burns the challenge first** (so it can't be replayed), checks the signature, then **computes the wallet address from the public key** (it never trusts an address the client sends). | |
+| 7 | That address **is** the account (`User.nimiq.address`). User is logged in. | |
+
+So by the end of sign-in we know the user's NIM wallet address, cryptographically.
+
+### Phase 2 — Paywall and payment request
+
+| # | What happens |
+|---|---|
+| 8 | User taps a Community feature. Server answers `402 membership_required`; app routes to `/unlock`. |
+| 9 | App calls `GET /v1/membership` → gets price, network (`mainnet`/`testnet`), merchant address, and whether payments are on. |
+| 10 | App calls `POST /v1/membership/nimiq/intents`. Server saves a **PaymentIntent** (`pending`): amount in Luna (1 NIM = 100,000 Luna), merchant address, network, unique **reference**, expiry. If a fresh one already exists it is **reused**. |
+
+### Phase 3 — Pay (user approval)
+
+| # | What happens |
+|---|---|
+| 11 | App checks the user's wallet network equals the intent's network. Mismatch → "wrong network" error, stop. |
+| 12 | App calls `nimiq.sendBasicTransactionWithData({ recipient, value: amountLuna, data: reference })`. |
+| 13 | **Nimiq Pay shows the approve dialog** (amount, recipient). User approves (or cancels → nothing happens). |
+| 14 | Wallet signs and broadcasts the transaction to the Nimiq network and returns a **txHash**. This only means *"submitted"*, **not "paid"**. |
+
+*Outside Nimiq Pay (fallback):* the screen shows address, amount and reference with copy buttons and a `nimiq:` deep link. The user pays manually and **must paste the reference into the message field**, then taps "I've paid".
+
+### Phase 4 — Verification (how we know it's real)
+
+| # | What happens |
+|---|---|
+| 15 | App calls `POST /v1/membership/nimiq/intents/:id/verify` with the `txHash`. Server only looks up intents owned by this user. |
+| 16 | Server asks the **node** for that transaction (`getTransactionByHash`). No hash? It scans the last 100 incoming txs to the merchant address for our reference. |
+| 17 | Server runs the checklist. **All** must pass: |
+| | ① tx exists on chain · ② didn't fail · ③ sent **to our address** · ④ amount **≥ price** · ⑤ message **equals the reference exactly** · ⑥ has **≥ 2 confirmations** |
+| 18 | Not mined / not enough confirmations → server replies `pending`. App **re-asks every 4 s, up to 45 times (~3 min)**. |
+| 19 | Something wrong (wrong address/amount/message, failed tx) → `400 payment_invalid` with the exact `reason`. |
+| 20 | Node unreachable → `502`. This is **never** treated as paid. |
+
+### Phase 5 — Settlement and unlock
+
+| # | What happens |
+|---|---|
+| 21 | Server atomically flips the intent `pending → paid` (only one concurrent request can win) and stores `txHash`. A **unique index on txHash** means one transaction can never pay twice. |
+| 22 | Server grants the **Membership** (lifetime by default) and notifies the user. |
+| 23 | App refreshes entitlements → Community unlocks. 🎉 |
+| 24 | **Settlement:** the NIM is already in the merchant wallet from step 14. There is no capture, no payout, no webhook, no fee. Moving it onward is done by hand in the merchant's own wallet. |
+
+### One picture
+
+```
+SIGN IN                         PAY                                  VERIFY & UNLOCK
+user ─ sign(challenge) ─► server    server ─ intent{ref,amount} ─► app   app ─ verify(txHash) ─► server
+server derives wallet addr          app ─ sendTx(amount, msg=ref) ─► Nimiq Pay      server ─ read tx ─► Node
+account = wallet                    user approves ✔ ── tx on blockchain ──► merchant wallet   checks 6 rules ─► paid ─► unlock
+```
+
+---
+
+# Part B — "Payment approval doesn't work in another app" — debugging guide
+
+"Approval" can mean two different things. Work out which one is failing first.
+
+| Symptom | Stage | Most likely cause | Fix |
+|---|---|---|---|
+| No approve dialog ever appears; `init()` times out (8 s) | **Before** approval | Page is **not running inside Nimiq Pay** (opened in Chrome/Safari). `window.nimiq` doesn't exist | Open it via Nimiq Pay → Mini Apps → Custom URL, or `nimiqpay://miniapp?url=<https-url>`. Must be **HTTPS** |
+| Blank page / API calls blocked in Nimiq Pay | Before approval | Backend `CORS_ORIGINS` doesn't include the web origin | Add the exact origin (scheme + host, no trailing slash) |
+| Dialog appears, user taps approve, app says "cancelled" | Approval | SDK threw `PERMISSION_DENIED` (user really declined, **or** wallet denied the app) | Retry; check Nimiq Pay isn't blocking the mini app; log `error.type` and `error.message` |
+| Dialog shows error / app shows "invalid" | Approval | `INVALID_TRANSACTION`: bad `recipient` address, `value` not an integer **Luna** (not NIM!), or `data` too long (limit 64 bytes) | Log the exact args passed to `sendBasicTransactionWithData`. `value` = NIM × 100000 |
+| "Wrong network" message | Before approval | Wallet on testnet, server on mainnet (or vice versa) | Align `NIMIQ_NETWORK`, the node URL and the wallet network |
+| Approved, got a txHash, app stays "pending" forever | **After** approval | Server can't find/confirm it: node is on a different network, node is lagging, or confirmations < `NIMIQ_MIN_CONFIRMATIONS` | Look the hash up on a block explorer; query the same node; check `needed` vs `confirmations` in the verify response |
+| `400 payment_invalid` → `wrong_reference` | After approval | Message isn't **exactly** the reference (manual payers forget it / add spaces; or the other app didn't pass `data: reference`) | Make sure `data` = `intent.reference` unchanged |
+| `payment_invalid` → `wrong_recipient` | After approval | Paid to a different address than the intent's | Pay the `intent.recipient` returned by the server, don't hard-code |
+| `payment_invalid` → `amount_too_low` | After approval | Sent less than `amountLuna` (often NIM/Luna mix-up) | Use `intent.amountLuna` as-is |
+| `409 payment_already_used` | After approval | That txHash already paid a different intent | Create a new intent; a tx can only be used once |
+| `502 payment_provider_unavailable` | After approval | Node unreachable (the app is **not** told "paid") | Check `NIMIQ_RPC_URL`, try again |
+| `503 payments_unavailable` | Before | `NIMIQ_RECEIVE_ADDRESS` / `NIMIQ_RPC_URL` missing or address typo (checksum) | Check boot log: `Nimiq payments: OFF — <reason>` |
+| Sign-in "invalid signature" | Sign-in approval | Nimiq Pay's signed-message byte format differs from what the server expects (undocumented, see §8) | Check the log `[nimiq-auth] ... verified as "<format>"`; port all four accepted variants |
+
+### 5-minute diagnosis checklist
+
+1. **Is it inside Nimiq Pay?** In the console: `!!(window.nimiq || window.nimiqPay)` must be `true`.
+2. **Same network everywhere?** `window.nimiqPay.network` === server `NIMIQ_NETWORK` === node's network.
+3. **Log what you pass to the SDK**: `{ recipient, value, data }`. `value` must be an integer in Luna; `data` must be the intent reference.
+4. **Catch and print the error**: `NimiqProviderError.is(e)` → `e.type` (`PERMISSION_DENIED` = declined, `INVALID_TRANSACTION` = bad args).
+5. **Did a txHash come back?** No → problem is *before the chain* (steps 1–4). Yes → the wallet part works; go to 6.
+6. **Look up the txHash on a Nimiq block explorer.** Check *to*, *amount*, *message*, *confirmations*.
+7. **Hit the verify endpoint and read the response**: `pending` + reason, or `payment_invalid` + `details.reason` names the exact rule that failed.
+8. **Check the server log** for `payment.intent` / `payment.confirmed` and the `Nimiq payments: ON/OFF` boot line.
+
+> Honest caveat: this repo has **never been run against the real Nimiq Pay app with real money** (see §11), so details such as
+> the exact `sign()` byte format and the shape of `sendBasicTransactionWithData` errors on a live wallet are unconfirmed. When the other app fails, capture
+> the **raw error object and the raw node transaction** (log `tx` in `verifyIntent`) — that will show quickly whether the
+> problem is the wallet side (before a txHash) or the verification side (after).
+
+---
+
+# Part C — Technical reference
 
 ## 1. Summary
 
