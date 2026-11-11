@@ -117,7 +117,7 @@
     "noCommunities": "No communities yet",
     "noCommunitiesBody": "You can start one from the Community tab.",
     "communityPaid": "Community access: {{nim}} NIM",
-    "communityPaidBody": "Join groups and events with a one-time payment. You can unlock it any time from the Community tab. Pet care is free."
+    "communityPaidBody": "Join groups and events with a monthly payment. You can unlock it any time from the Community tab. Pet care is free."
   },
   "interests": {
     "walks": "Daily walks",
@@ -570,7 +570,7 @@
     "b4": "Discover events happening near you",
     "price": "{{nim}} NIM",
     "oneTime": "One-time payment",
-    "recurring": "Every {{days}} days",
+    "recurring": "Monthly",
     "cta": "Unlock with Nimiq Pay",
     "unlockShort": "Unlock",
     "freeNote": "Pet care, reminders and your health records always stay free."

@@ -147,7 +147,7 @@ account = wallet                    user approves ✔ ── tx on blockchain �
 | Wallet / client SDK | **Nimiq Pay** mini-app SDK: `@nimiq/mini-app-sdk` `^0.2.5` (frontend only). |
 | Server-side "SDK" | **None.** The backend talks to a Nimiq node over plain **JSON-RPC** using `fetch`. |
 | Settlement | The user's NIM goes **wallet → wallet, on-chain**, straight to the merchant's receiving address (`NIMIQ_RECEIVE_ADDRESS`). No custody, no payout step, no fees paid to a processor. |
-| Price | `MEMBERSHIP_PRICE_NIM` (default `1`), one-time by default (`MEMBERSHIP_DAYS=0` = lifetime). |
+| Price | `MEMBERSHIP_PRICE_NIM` (default `1`), monthly by default (`MEMBERSHIP_DAYS=30`; `0` = lifetime). |
 | Source of truth for "is paid" | Only the **server's blockchain check**. The client saying "I paid" never unlocks anything. |
 | Identity | Accounts *are* Nimiq wallets (sign-in by signed message). See §8. |
 | Status | Tested with a **fake node** in automated tests. **Never run against a real NIM payment or the real Nimiq Pay app** (see §11). |

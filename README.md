@@ -150,7 +150,7 @@ the Activities empty state.
 
 ## Membership & Nimiq payments
 
-Community access costs **1 NIM, one time** by default. Change the price with `MEMBERSHIP_PRICE_NIM` in
+Community access costs **1 NIM per month** by default. Change the price with `MEMBERSHIP_PRICE_NIM` in
 `backend/.env` (e.g. `2.5`; up to 5 decimals; restart the API) — the app reads the price from the server, so nothing
 else changes. Set `MEMBERSHIP_DAYS` for time-limited access instead. A payment request keeps the price it was
 issued at, so a change never affects someone who is mid-payment. Pet care, reminders and health records are always free, even for lapsed members.

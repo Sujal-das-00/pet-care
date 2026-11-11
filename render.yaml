@@ -38,8 +38,8 @@ services:
         value: "1"
       - key: MEMBERSHIP_PRICE_NIM # what members pay, in NIM. Change it any time and redeploy.
         value: "1"
-      - key: MEMBERSHIP_DAYS # 0 = one-time payment, access never expires
-        value: "0"
+      - key: MEMBERSHIP_DAYS # 30 = monthly access (renew by paying again); 0 = one-time, never expires
+        value: "30"
 
       # --- Nimiq payments (leave the two below empty to run with payments off) ---
       - key: NIMIQ_NETWORK # mainnet or testnet
